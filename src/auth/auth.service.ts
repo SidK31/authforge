@@ -14,10 +14,14 @@ export class AuthService {
 
   async register(input: RegisterDto) {
     const email = input.email.trim().toLowerCase();
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
 
     if (existingUser) {
-      throw new ConflictException('An account with this email already exists');
+      throw new ConflictException(
+        'An account with this email already exists',
+      );
     }
 
     const passwordHash = await this.hashPassword(input.password);
