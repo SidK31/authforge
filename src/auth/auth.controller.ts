@@ -47,7 +47,10 @@ export class AuthController {
   @Post('refresh')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
-  refresh(@Body() input: RefreshTokenDto, @Req() request: AuthenticatedRequest) {
+  refresh(
+    @Body() input: RefreshTokenDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
     return this.authService.refresh(input, {
       ipAddress: request.ip,
       userAgent: request.get('user-agent'),
@@ -58,7 +61,10 @@ export class AuthController {
   @Post('logout')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
-  logout(@Body() input: RefreshTokenDto, @Req() request: AuthenticatedRequest) {
+  logout(
+    @Body() input: RefreshTokenDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
     return this.authService.logout(input, {
       ipAddress: request.ip,
       userAgent: request.get('user-agent'),
