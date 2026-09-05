@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomBytes, scryptSync } from 'node:crypto';
 import { AuthService } from './auth.service';
@@ -9,6 +9,12 @@ function createPrismaMock() {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+  };
+}
+
+function createJwtMock() {
+  return {
+    signAsync: jest.fn(),
   };
 }
 
@@ -30,7 +36,7 @@ describe('AuthService', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
     });
 
-    const service = new AuthService(prisma as never);
+    const service = new AuthService(prisma as never, createJwtMock() as never);
 
     const result = await service.register({
       email: '  USER@Example.COM ',
@@ -58,7 +64,7 @@ describe('AuthService', () => {
     const prisma = createPrismaMock();
     prisma.user.findUnique.mockResolvedValue({ id: 'existing-user' });
 
-    const service = new AuthService(prisma as never);
+    const service = new AuthService(prisma as never, createJwtMock() as never);
 
     await expect(
       service.register({
@@ -82,7 +88,7 @@ describe('AuthService', () => {
     );
     prisma.user.create.mockRejectedValue(uniqueConstraintError);
 
-    const service = new AuthService(prisma as never);
+    const service = new AuthService(prisma as never, createJwtMock() as never);
 
     await expect(
       service.register({
@@ -92,8 +98,82 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('logs in an active user and returns a short-lived access token', async () => {
+    const prisma = createPrismaMock();
+    const jwt = createJwtMock();
+    const passwordHash = createPasswordHash('a-secure-password-123');
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-id',
+      email: 'user@example.com',
+      passwordHash,
+      isActive: true,
+    });
+    jwt.signAsync.mockResolvedValue('signed-access-token');
+
+    const service = new AuthService(prisma as never, jwt as never);
+    const result = await service.login({
+      email: ' USER@Example.COM ',
+      password: 'a-secure-password-123',
+    });
+
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { email: 'user@example.com' },
+    });
+    expect(jwt.signAsync).toHaveBeenCalledWith({
+      sub: 'user-id',
+      email: 'user@example.com',
+    });
+    expect(result).toEqual({
+      accessToken: 'signed-access-token',
+      tokenType: 'Bearer',
+      expiresIn: 900,
+    });
+  });
+
+  it('uses the same generic error for unknown users and wrong passwords', async () => {
+    const prisma = createPrismaMock();
+    const jwt = createJwtMock();
+    const service = new AuthService(prisma as never, jwt as never);
+
+    prisma.user.findUnique.mockResolvedValue(null);
+    await expect(
+      service.login({ email: 'missing@example.com', password: 'wrong' }),
+    ).rejects.toEqual(new UnauthorizedException('Invalid email or password'));
+
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-id',
+      email: 'user@example.com',
+      passwordHash: createPasswordHash('correct-password'),
+      isActive: true,
+    });
+    await expect(
+      service.login({ email: 'user@example.com', password: 'wrong-password' }),
+    ).rejects.toEqual(new UnauthorizedException('Invalid email or password'));
+  });
+
+  it('rejects inactive users before checking their password', async () => {
+    const prisma = createPrismaMock();
+    const service = new AuthService(prisma as never, createJwtMock() as never);
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-id',
+      email: 'user@example.com',
+      passwordHash: createPasswordHash('correct-password'),
+      isActive: false,
+    });
+
+    await expect(
+      service.login({
+        email: 'user@example.com',
+        password: 'correct-password',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it('verifies a correct password and rejects an incorrect password', async () => {
-    const service = new AuthService(createPrismaMock() as never);
+    const service = new AuthService(
+      createPrismaMock() as never,
+      createJwtMock() as never,
+    );
     const passwordHash = createPasswordHash('a-secure-password-123');
 
     await expect(
@@ -105,7 +185,10 @@ describe('AuthService', () => {
   });
 
   it('rejects malformed password hashes', async () => {
-    const service = new AuthService(createPrismaMock() as never);
+    const service = new AuthService(
+      createPrismaMock() as never,
+      createJwtMock() as never,
+    );
 
     await expect(
       service.verifyPassword('a-secure-password-123', 'invalid'),
