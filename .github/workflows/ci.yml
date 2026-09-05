@@ -29,12 +29,8 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
 
-      - name: Check formatting and show diff
-        run: |
-          npm run format:check || true
-          npm run format
-          git diff -- src test
-          exit 1
+      - name: Check formatting
+        run: npm run format:check
 
       - name: Check lint
         run: npm run lint:check
