@@ -29,6 +29,11 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
 
+      - name: Preview Redis abuse test formatting
+        run: |
+          npx prettier --write src/auth/auth-abuse.service.spec.ts
+          git diff -- src/auth/auth-abuse.service.spec.ts
+
       - name: Check formatting
         run: npm run format:check
 
