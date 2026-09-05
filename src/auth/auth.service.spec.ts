@@ -1,5 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { randomBytes, scryptSync } from 'node:crypto';
 import { AuthService } from './auth.service';
 
 function createPrismaMock() {
@@ -9,6 +10,12 @@ function createPrismaMock() {
       create: jest.fn(),
     },
   };
+}
+
+function createPasswordHash(password: string) {
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = scryptSync(password, salt, 64);
+  return `scrypt:${salt}:${derivedKey.toString('hex')}`;
 }
 
 describe('AuthService', () => {
@@ -83,5 +90,25 @@ describe('AuthService', () => {
         password: 'a-secure-password-123',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('verifies a correct password and rejects an incorrect password', async () => {
+    const service = new AuthService(createPrismaMock() as never);
+    const passwordHash = createPasswordHash('a-secure-password-123');
+
+    await expect(
+      service.verifyPassword('a-secure-password-123', passwordHash),
+    ).resolves.toBe(true);
+    await expect(
+      service.verifyPassword('wrong-password', passwordHash),
+    ).resolves.toBe(false);
+  });
+
+  it('rejects malformed password hashes', async () => {
+    const service = new AuthService(createPrismaMock() as never);
+
+    await expect(
+      service.verifyPassword('a-secure-password-123', 'invalid'),
+    ).resolves.toBe(false);
   });
 });
