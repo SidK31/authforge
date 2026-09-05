@@ -37,9 +37,16 @@ Status: In progress
 
 ## Phase 4: Authentication
 
-Status: Pending
+Status: In progress
 
-Build and test registration, login, logout, password handling, access tokens, refresh token rotation and session management.
+1. Registration endpoint and password hashing
+2. Login
+3. Access token handling
+4. Refresh token rotation
+5. Logout and session revocation
+6. Password reset
+7. Email verification
+8. Authentication abuse protection
 
 ## Phase 5: Authorization
 
