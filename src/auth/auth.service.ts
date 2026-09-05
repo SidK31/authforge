@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -13,6 +14,7 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { promisify } from 'node:util';
+import { AuditContext, AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -29,9 +31,10 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    @Optional() private readonly audit?: AuditService,
   ) {}
 
-  async register(input: RegisterDto) {
+  async register(input: RegisterDto, context?: AuditContext) {
     const email = input.email.trim().toLowerCase();
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
@@ -44,7 +47,7 @@ export class AuthService {
     const passwordHash = await this.hashPassword(input.password);
 
     try {
-      return await this.prisma.user.create({
+      const user = await this.prisma.user.create({
         data: {
           email,
           passwordHash,
@@ -57,6 +60,9 @@ export class AuthService {
           createdAt: true,
         },
       });
+
+      await this.audit?.record('REGISTER_SUCCESS', user.id, context);
+      return user;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -71,13 +77,19 @@ export class AuthService {
     }
   }
 
-  async login(input: LoginDto) {
+  async login(input: LoginDto, context?: AuditContext) {
     const email = input.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
 
     if (!user || !user.isActive) {
+      await this.audit?.record(
+        'LOGIN_FAILURE',
+        user?.id,
+        context,
+        { reason: !user ? 'user-not-found' : 'user-inactive' },
+      );
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -87,6 +99,12 @@ export class AuthService {
     );
 
     if (!passwordMatches) {
+      await this.audit?.record(
+        'LOGIN_FAILURE',
+        user.id,
+        context,
+        { reason: 'invalid-password' },
+      );
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -97,16 +115,19 @@ export class AuthService {
         refreshTokenHash: this.hashRefreshToken(refreshToken),
         tokenFamilyId: randomUUID(),
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+        userAgent: context?.userAgent,
+        ipAddress: context?.ipAddress,
       },
     });
 
+    await this.audit?.record('LOGIN_SUCCESS', user.id, context);
     return this.createTokenResponse(user.id, user.email, refreshToken);
   }
 
-  async refresh(input: RefreshTokenDto) {
+  async refresh(input: RefreshTokenDto, context?: AuditContext) {
     const tokenHash = this.hashRefreshToken(input.refreshToken);
 
-    return this.prisma.$transaction(async (tx) => {
+    const response = await this.prisma.$transaction(async (tx) => {
       const session = await tx.session.findUnique({
         where: { refreshTokenHash: tokenHash },
         include: { user: true },
@@ -174,6 +195,8 @@ export class AuthService {
           refreshTokenHash: this.hashRefreshToken(nextRefreshToken),
           tokenFamilyId: session.tokenFamilyId,
           expiresAt: session.expiresAt,
+          userAgent: context?.userAgent,
+          ipAddress: context?.ipAddress,
         },
       });
 
@@ -183,11 +206,14 @@ export class AuthService {
         nextRefreshToken,
       );
     });
+
+    await this.audit?.record('REFRESH_SUCCESS', undefined, context);
+    return response;
   }
 
-  async logout(input: RefreshTokenDto) {
+  async logout(input: RefreshTokenDto, context?: AuditContext) {
     const tokenHash = this.hashRefreshToken(input.refreshToken);
-    await this.prisma.session.updateMany({
+    const result = await this.prisma.session.updateMany({
       where: {
         refreshTokenHash: tokenHash,
         revokedAt: null,
@@ -198,10 +224,14 @@ export class AuthService {
       },
     });
 
+    await this.audit?.record('LOGOUT', undefined, context, {
+      sessionRevoked: result.count === 1,
+    });
+
     return { success: true };
   }
 
-  async logoutAll(userId: string) {
+  async logoutAll(userId: string, context?: AuditContext) {
     const result = await this.prisma.session.updateMany({
       where: {
         userId,
@@ -211,6 +241,10 @@ export class AuthService {
         revokedAt: new Date(),
         revokedReason: 'logout-all',
       },
+    });
+
+    await this.audit?.record('LOGOUT_ALL', userId, context, {
+      revokedSessions: result.count,
     });
 
     return {
