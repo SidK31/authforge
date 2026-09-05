@@ -233,6 +233,95 @@ describe('AuthService', () => {
     expect(result.accessToken).toBe('new-access-token');
   });
 
+  it('rejects a concurrent refresh when another request already rotated the token', async () => {
+    const prisma = createPrismaMock();
+    const jwt = createJwtMock();
+    const service = new AuthService(prisma as never, jwt as never);
+    prisma.session.findUnique.mockResolvedValue({
+      id: 'session-id',
+      userId: 'user-id',
+      refreshTokenHash: 'old-hash',
+      tokenFamilyId: 'family-id',
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      replacedAt: null,
+      user: {
+        id: 'user-id',
+        email: 'user@example.com',
+        isActive: true,
+      },
+    });
+    prisma.session.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
+    prisma.session.create.mockResolvedValue({ id: 'next-session-id' });
+    jwt.signAsync.mockResolvedValue('new-access-token');
+
+    const results = await Promise.allSettled([
+      service.refresh({ refreshToken: 'a'.repeat(64) }),
+      service.refresh({ refreshToken: 'a'.repeat(64) }),
+    ]);
+
+    const successful = results.filter(
+      (result) => result.status === 'fulfilled',
+    );
+    const rejected = results.filter((result) => result.status === 'rejected');
+
+    expect(successful).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason).toEqual(
+      new UnauthorizedException('Invalid refresh token'),
+    );
+    expect(prisma.session.create).toHaveBeenCalledTimes(1);
+    expect(prisma.session.updateMany).toHaveBeenLastCalledWith({
+      where: {
+        userId: 'user-id',
+        tokenFamilyId: 'family-id',
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+        revokedReason: 'refresh-token-reuse-detected',
+      },
+    });
+  });
+
+  it('binds the rotated session and access token to the stored session owner', async () => {
+    const prisma = createPrismaMock();
+    const jwt = createJwtMock();
+    const service = new AuthService(prisma as never, jwt as never);
+    prisma.session.findUnique.mockResolvedValue({
+      id: 'session-id',
+      userId: 'owner-user-id',
+      tokenFamilyId: 'family-id',
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      replacedAt: null,
+      user: {
+        id: 'owner-user-id',
+        email: 'owner@example.com',
+        isActive: true,
+      },
+    });
+    prisma.session.updateMany.mockResolvedValue({ count: 1 });
+    prisma.session.create.mockResolvedValue({ id: 'next-session-id' });
+    jwt.signAsync.mockResolvedValue('new-access-token');
+
+    await service.refresh({ refreshToken: 'a'.repeat(64) });
+
+    expect(prisma.session.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'owner-user-id',
+        tokenFamilyId: 'family-id',
+      }),
+    });
+    expect(jwt.signAsync).toHaveBeenCalledWith({
+      sub: 'owner-user-id',
+      email: 'owner@example.com',
+    });
+  });
+
   it('revokes the token family when a rotated refresh token is reused', async () => {
     const prisma = createPrismaMock();
     const service = new AuthService(prisma as never, createJwtMock() as never);
