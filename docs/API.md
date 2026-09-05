@@ -1,10 +1,10 @@
 # AuthForge API Plan
 
-The first API will be REST based and versioned under /api/v1.
+The current API is REST based under `/api`. Versioning will be introduced before the public API contract is considered stable.
 
 ## Authentication
 
-### POST /api/v1/auth/register
+### POST /api/auth/register
 
 Creates a new user account.
 
@@ -13,40 +13,47 @@ Input:
 - email
 - password
 
-Returns a safe user representation and the result of the verification workflow. It must not return password hashes or secrets.
+Returns a safe user representation. It does not return password hashes or secrets.
 
-### POST /api/v1/auth/login
+### POST /api/auth/login
 
-Authenticates a user and creates a session.
+Authenticates a user and creates a server-side refresh-token session.
 
 Input:
 
 - email
 - password
 
-Returns an access token and refresh token through the security model defined by the implementation.
+Returns:
 
-### POST /api/v1/auth/refresh
+- short-lived access token
+- opaque refresh token
+- token type
+- access-token lifetime
+
+### POST /api/auth/refresh
 
 Rotates a refresh token and returns a new access token and refresh token.
 
-A previously rotated refresh token must not be accepted as a valid session continuation.
+A previously rotated refresh token triggers refresh-token family revocation rather than being accepted as a valid session continuation.
 
-### POST /api/v1/auth/logout
+### POST /api/auth/logout
 
-Revokes the current session.
+Revokes the supplied refresh-token session.
 
-### POST /api/v1/auth/logout-all
+## Planned authentication endpoints
+
+### POST /api/auth/logout-all
 
 Revokes all active sessions for the authenticated user.
 
 ## Users
 
-### GET /api/v1/users/me
+### GET /api/users/me
 
 Returns the authenticated user's safe profile.
 
-### PATCH /api/v1/users/me
+### PATCH /api/users/me
 
 Updates allowed profile fields.
 
@@ -54,11 +61,11 @@ Sensitive account changes will use dedicated flows rather than allowing arbitrar
 
 ## Authorization
 
-### GET /api/v1/roles
+### GET /api/roles
 
 Administrative endpoint for listing roles.
 
-### GET /api/v1/permissions
+### GET /api/permissions
 
 Administrative endpoint for listing permissions.
 
@@ -71,6 +78,6 @@ The exact administrative routes will be finalized when the authorization module 
 3. Request bodies are validated before application logic runs.
 4. Responses contain only fields intended for the client.
 5. Authentication errors should avoid unnecessary account enumeration.
-6. Security sensitive endpoints are rate limited.
+6. Security-sensitive endpoints are rate limited.
 7. Error responses use a consistent public format.
 8. Internal exceptions and stack traces are never returned to clients.
