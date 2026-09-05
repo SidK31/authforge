@@ -113,17 +113,22 @@ describe('JwtAuthGuard', () => {
     });
   });
 
-  it('rejects tokens when JWT verification fails for issuer, audience, algorithm, or expiry', async () => {
-    const reflector = {
-      getAllAndOverride: jest.fn().mockReturnValue(false),
-    } as unknown as Reflector;
-    const jwt = {
-      verifyAsync: jest.fn().mockRejectedValue(new Error('jwt verification failed')),
-    } as unknown as JwtService;
-    const guard = new JwtAuthGuard(jwt, reflector);
+  it(
+    'rejects tokens when JWT verification fails for issuer, audience, algorithm, or expiry',
+    async () => {
+      const reflector = {
+        getAllAndOverride: jest.fn().mockReturnValue(false),
+      } as unknown as Reflector;
+      const jwt = {
+        verifyAsync: jest
+          .fn()
+          .mockRejectedValue(new Error('jwt verification failed')),
+      } as unknown as JwtService;
+      const guard = new JwtAuthGuard(jwt, reflector);
 
-    await expect(
-      guard.canActivate(createContext('Bearer forged-token')),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
-  });
+      await expect(
+        guard.canActivate(createContext('Bearer forged-token')),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    },
+  );
 });
