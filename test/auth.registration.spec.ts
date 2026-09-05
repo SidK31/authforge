@@ -1,6 +1,12 @@
 import { ConflictException } from '@nestjs/common';
 import { AuthService } from '../src/auth/auth.service';
 
+function createJwtMock() {
+  return {
+    signAsync: jest.fn(),
+  };
+}
+
 describe('AuthService registration', () => {
   const user = {
     id: 'user-id',
@@ -18,7 +24,7 @@ describe('AuthService registration', () => {
       },
     };
 
-    const service = new AuthService(prisma as never);
+    const service = new AuthService(prisma as never, createJwtMock() as never);
     const result = await service.register({
       email: '  USER@EXAMPLE.COM ',
       password: 'a-strong-password-123',
@@ -41,7 +47,7 @@ describe('AuthService registration', () => {
       },
     };
 
-    const service = new AuthService(prisma as never);
+    const service = new AuthService(prisma as never, createJwtMock() as never);
 
     await expect(
       service.register({
