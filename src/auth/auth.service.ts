@@ -201,6 +201,24 @@ export class AuthService {
     return { success: true };
   }
 
+  async logoutAll(userId: string) {
+    const result = await this.prisma.session.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+        revokedReason: 'logout-all',
+      },
+    });
+
+    return {
+      success: true,
+      revokedSessions: result.count,
+    };
+  }
+
   async verifyPassword(password: string, passwordHash: string) {
     const [algorithm, salt, storedKey] = passwordHash.split(':');
 
