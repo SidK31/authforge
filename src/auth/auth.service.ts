@@ -1,12 +1,17 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
+import {
+  randomBytes,
+  scrypt as scryptCallback,
+  timingSafeEqual,
+} from 'node:crypto';
 import { promisify } from 'node:util';
 import { PrismaService } from '../database/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 
 const scrypt = promisify(scryptCallback);
 const KEY_LENGTH = 64;
+const SALT_LENGTH = 16;
 
 @Injectable()
 export class AuthService {
@@ -52,8 +57,29 @@ export class AuthService {
     }
   }
 
+  async verifyPassword(password: string, passwordHash: string) {
+    const [algorithm, salt, storedKey] = passwordHash.split(':');
+
+    if (
+      algorithm !== 'scrypt' ||
+      !salt ||
+      !storedKey ||
+      storedKey.length !== KEY_LENGTH * 2
+    ) {
+      return false;
+    }
+
+    const derivedKey = (await scrypt(password, salt, KEY_LENGTH)) as Buffer;
+    const expectedKey = Buffer.from(storedKey, 'hex');
+
+    return (
+      expectedKey.length === derivedKey.length &&
+      timingSafeEqual(expectedKey, derivedKey)
+    );
+  }
+
   private async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
+    const salt = randomBytes(SALT_LENGTH).toString('hex');
     const derivedKey = (await scrypt(password, salt, KEY_LENGTH)) as Buffer;
     return `scrypt:${salt}:${derivedKey.toString('hex')}`;
   }
