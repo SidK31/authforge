@@ -17,6 +17,12 @@ function createContext(authorization?: string): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
+const verificationOptions = {
+  algorithms: ['HS256'],
+  issuer: 'authforge',
+  audience: 'authforge-api',
+};
+
 describe('JwtAuthGuard', () => {
   it('allows routes marked public', async () => {
     const reflector = {
@@ -62,6 +68,10 @@ describe('JwtAuthGuard', () => {
     };
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(jwt.verifyAsync).toHaveBeenCalledWith(
+      'valid-token',
+      verificationOptions,
+    );
     expect(request.user).toEqual({
       sub: 'user-id',
       email: 'user@example.com',
@@ -79,6 +89,41 @@ describe('JwtAuthGuard', () => {
 
     await expect(
       guard.canActivate(createContext('Bearer invalid-token')),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('passes strict verification constraints to the JWT library', async () => {
+    const reflector = {
+      getAllAndOverride: jest.fn().mockReturnValue(false),
+    } as unknown as Reflector;
+    const jwt = {
+      verifyAsync: jest.fn().mockResolvedValue({
+        sub: 'user-id',
+        email: 'user@example.com',
+      }),
+    } as unknown as JwtService;
+    const guard = new JwtAuthGuard(jwt, reflector);
+
+    await guard.canActivate(createContext('Bearer token'));
+
+    expect(jwt.verifyAsync).toHaveBeenCalledWith('token', {
+      algorithms: ['HS256'],
+      issuer: 'authforge',
+      audience: 'authforge-api',
+    });
+  });
+
+  it('rejects tokens when JWT verification fails for issuer, audience, algorithm, or expiry', async () => {
+    const reflector = {
+      getAllAndOverride: jest.fn().mockReturnValue(false),
+    } as unknown as Reflector;
+    const jwt = {
+      verifyAsync: jest.fn().mockRejectedValue(new Error('jwt verification failed')),
+    } as unknown as JwtService;
+    const guard = new JwtAuthGuard(jwt, reflector);
+
+    await expect(
+      guard.canActivate(createContext('Bearer forged-token')),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });
