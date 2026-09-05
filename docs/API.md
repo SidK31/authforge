@@ -51,7 +51,7 @@ Revokes all active sessions for the authenticated user.
 
 ### GET /api/users/me
 
-Returns the authenticated user's safe profile.
+Returns the authenticated user's safe profile from the verified access-token identity.
 
 ### PATCH /api/users/me
 
@@ -63,13 +63,13 @@ Sensitive account changes will use dedicated flows rather than allowing arbitrar
 
 ### GET /api/roles
 
-Administrative endpoint for listing roles.
+Lists roles and their permissions. Requires the `roles:read` permission.
 
 ### GET /api/permissions
 
-Administrative endpoint for listing permissions.
+Planned administrative endpoint for listing permissions.
 
-The exact administrative routes will be finalized when the authorization module is implemented.
+Authorization metadata is enforced server-side through permission guards. Roles and permissions are seeded separately; no default user is granted administrative access automatically.
 
 ## API rules
 
