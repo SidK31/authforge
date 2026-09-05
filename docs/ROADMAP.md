@@ -52,15 +52,23 @@ Status: In progress
 
 ## Phase 5: Authorization
 
-Status: Pending
+Status: In progress
 
-Build roles, permissions and server-side authorization checks.
+1. Permission metadata and server-side permission guard — Complete
+2. Roles and permissions seed data — Complete
+3. Protected roles endpoint — Complete
+4. Role assignment and management APIs
+5. Authorization abuse and privilege-escalation tests
 
 ## Phase 6: Security controls
 
-Status: Pending
+Status: In progress
 
-Add brute-force protection, audit events and other security controls identified during the threat model.
+1. Authentication audit events — Complete
+2. Strict JWT verification constraints — Complete
+3. Brute-force protection and Redis-backed controls
+4. Security-focused request and account controls
+5. Review audit-log failure handling and operational visibility
 
 ## Phase 7: Testing and security review
 
