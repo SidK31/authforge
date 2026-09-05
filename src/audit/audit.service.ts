@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
 export interface AuditContext {
@@ -8,6 +8,8 @@ export interface AuditContext {
 
 @Injectable()
 export class AuditService {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async record(
@@ -16,14 +18,19 @@ export class AuditService {
     context?: AuditContext,
     metadata?: Record<string, unknown>,
   ) {
-    return this.prisma.auditEvent.create({
-      data: {
-        event,
-        userId,
-        ipAddress: context?.ipAddress,
-        userAgent: context?.userAgent,
-        metadata,
-      },
-    });
+    try {
+      return await this.prisma.auditEvent.create({
+        data: {
+          event,
+          userId,
+          ipAddress: context?.ipAddress,
+          userAgent: context?.userAgent,
+          metadata,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to record audit event: ${event}`, error);
+      return null;
+    }
   }
 }
