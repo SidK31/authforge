@@ -71,8 +71,11 @@ model Session {
   id               String    @id @default(uuid()) @db.Uuid
   userId           String    @db.Uuid
   refreshTokenHash String    @unique
+  tokenFamilyId    String    @db.Uuid
   expiresAt        DateTime
   revokedAt        DateTime?
+  replacedAt       DateTime?
+  revokedReason    String?
   createdAt        DateTime  @default(now())
   lastUsedAt       DateTime?
   userAgent        String?
@@ -82,6 +85,7 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([tokenFamilyId])
 }
 
 model AuditEvent {
