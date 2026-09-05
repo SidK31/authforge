@@ -25,7 +25,7 @@ Status: Complete
 
 ## Phase 3: Foundation
 
-Status: In progress
+Status: Complete
 
 1. Initialize the NestJS application
 2. Configure TypeScript and code quality tools
@@ -34,31 +34,33 @@ Status: In progress
 5. Add validation and error handling
 6. Add Docker development setup
 7. Add the initial test setup
+8. Add the initial Prisma migration
 
 ## Phase 4: Authentication
 
 Status: In progress
 
-1. Registration endpoint and password hashing
-2. Login
-3. Access token handling
-4. Refresh token rotation
-5. Logout and session revocation
-6. Password reset
-7. Email verification
-8. Authentication abuse protection
+1. Registration endpoint and password hashing — Complete
+2. Login — Complete
+3. Access token handling — Complete
+4. Refresh token rotation — Complete
+5. Logout and session revocation — Complete
+6. Protected routes — Complete
+7. Password reset
+8. Email verification
+9. Authentication abuse protection and Redis-backed controls
 
 ## Phase 5: Authorization
 
 Status: Pending
 
-Build roles, permissions and server side authorization checks.
+Build roles, permissions and server-side authorization checks.
 
 ## Phase 6: Security controls
 
 Status: Pending
 
-Add rate limiting, brute force protection, audit events and other security controls identified during the threat model.
+Add brute-force protection, audit events and other security controls identified during the threat model.
 
 ## Phase 7: Testing and security review
 
