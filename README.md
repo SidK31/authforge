@@ -4,6 +4,14 @@ AuthForge is a secure authentication and authorization service for modern applic
 
 The goal is simple: make the security work around user accounts easier to build correctly, while keeping the system understandable and easy to integrate.
 
+## Live demo
+
+The current frontend demo is deployed with GitHub Pages.
+
+Live site: https://sidk31.github.io/authforge/
+
+The registration form currently validates input in the browser. It does not send or store credentials. The real API connection will be added after the backend deployment is ready.
+
 ## What AuthForge will provide
 
 1. User registration and login
@@ -25,9 +33,11 @@ The first version will use NestJS, PostgreSQL, Prisma, Redis, Docker and TypeScr
 
 ## Project status
 
-AuthForge is currently in the planning and architecture phase.
+AuthForge is being built in small, reviewed phases. Product requirements, system architecture, database direction, API direction and the first registration implementation are in place. The GitHub Pages demo provides a visible frontend while the backend continues to be developed.
 
-The implementation will be built in small, reviewed phases. Security decisions and important engineering decisions will be documented as the project grows.
+## Documentation
+
+The `docs` directory contains the product scope, architecture, database design, API direction, threat model, security decisions and development roadmap.
 
 ## Why this project exists
 
