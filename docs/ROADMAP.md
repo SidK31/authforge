@@ -12,20 +12,20 @@ Status: Complete
 
 ## Phase 2: System design
 
-Status: Pending
+Status: Complete
 
 1. Choose the application architecture
 2. Design the module structure
-3. Design the database schema
+3. Design the database direction
 4. Design authentication and session flows
 5. Design authorization and permissions
-6. Define API contracts
+6. Define the API direction
 7. Create the threat model
 8. Record key architecture decisions
 
 ## Phase 3: Foundation
 
-Status: Pending
+Status: In progress
 
 1. Initialize the NestJS application
 2. Configure TypeScript and code quality tools
