@@ -22,38 +22,56 @@ export class AuthController {
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
-  register(@Body() input: RegisterDto) {
-    return this.authService.register(input);
+  register(
+    @Body() input: RegisterDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.authService.register(input, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
   }
 
   @Public()
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
-  login(@Body() input: LoginDto) {
-    return this.authService.login(input);
+  login(@Body() input: LoginDto, @Req() request: AuthenticatedRequest) {
+    return this.authService.login(input, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
   }
 
   @Public()
   @Post('refresh')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
-  refresh(@Body() input: RefreshTokenDto) {
-    return this.authService.refresh(input);
+  refresh(@Body() input: RefreshTokenDto, @Req() request: AuthenticatedRequest) {
+    return this.authService.refresh(input, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
   }
 
   @Public()
   @Post('logout')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
-  logout(@Body() input: RefreshTokenDto) {
-    return this.authService.logout(input);
+  logout(@Body() input: RefreshTokenDto, @Req() request: AuthenticatedRequest) {
+    return this.authService.logout(input, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
   }
 
   @Post('logout-all')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   logoutAll(@Req() request: AuthenticatedRequest) {
-    return this.authService.logoutAll(request.user.sub);
+    return this.authService.logoutAll(request.user.sub, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
   }
 }
