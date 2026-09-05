@@ -18,24 +18,27 @@ describe('AuthAbuseService', () => {
     process.env.NODE_ENV = 'test';
   });
 
-  it('throttles login attempts when either IP or email exceeds the limit', async () => {
-    const redis = createRedisMock();
-    const service = new AuthAbuseService(redis);
-    (redis.eval as jest.Mock)
-      .mockResolvedValueOnce(5)
-      .mockResolvedValueOnce(6);
+  it(
+    'throttles login attempts when either IP or email exceeds the limit',
+    async () => {
+      const redis = createRedisMock();
+      const service = new AuthAbuseService(redis);
+      (redis.eval as jest.Mock)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(6);
 
-    await expect(
-      service.assertLoginAllowed('user@example.com', '203.0.113.10'),
-    ).rejects.toEqual(
-      new HttpException(
-        'Too many authentication attempts. Try again later.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      ),
-    );
+      await expect(
+        service.assertLoginAllowed('user@example.com', '203.0.113.10'),
+      ).rejects.toEqual(
+        new HttpException(
+          'Too many authentication attempts. Try again later.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        ),
+      );
 
-    expect(redis.eval).toHaveBeenCalledTimes(2);
-  });
+      expect(redis.eval).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('hashes security dimensions before storing Redis keys', async () => {
     const redis = createRedisMock();
