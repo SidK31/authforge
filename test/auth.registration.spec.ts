@@ -16,9 +16,9 @@ describe('AuthService registration', () => {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(user),
       },
-    } as never;
+    };
 
-    const service = new AuthService(prisma);
+    const service = new AuthService(prisma as never);
     const result = await service.register({
       email: '  USER@EXAMPLE.COM ',
       password: 'a-strong-password-123',
@@ -39,9 +39,9 @@ describe('AuthService registration', () => {
         findUnique: jest.fn().mockResolvedValue({ id: 'existing-user' }),
         create: jest.fn(),
       },
-    } as never;
+    };
 
-    const service = new AuthService(prisma);
+    const service = new AuthService(prisma as never);
 
     await expect(
       service.register({
