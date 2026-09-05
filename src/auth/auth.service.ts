@@ -1,9 +1,9 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
+import { promisify } from 'node:util';
 import { PrismaService } from '../database/prisma.service';
 import { RegisterDto } from './dto/register.dto';
-import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
-import { Prisma } from '@prisma/client';
-import { promisify } from 'node:util';
 
 const scrypt = promisify(scryptCallback);
 const KEY_LENGTH = 64;
@@ -37,7 +37,10 @@ export class AuthService {
         },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('An account with this email already exists');
       }
 
