@@ -80,9 +80,9 @@ describe('PermissionsGuard', () => {
     } as unknown as PrismaService;
     const guard = new PermissionsGuard(reflector, prisma);
 
-    await expect(guard.canActivate(createContext('user-id'))).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      guard.canActivate(createContext('user-id')),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('requires every declared permission, not just one of them', async () => {
@@ -104,9 +104,9 @@ describe('PermissionsGuard', () => {
     } as unknown as PrismaService;
     const guard = new PermissionsGuard(reflector, prisma);
 
-    await expect(guard.canActivate(createContext('user-id'))).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      guard.canActivate(createContext('user-id')),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('rejects a request without a verified identity', async () => {
