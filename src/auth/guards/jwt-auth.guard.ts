@@ -50,7 +50,11 @@ export class JwtAuthGuard implements CanActivate {
       const payload = await this.jwt.verifyAsync<{
         sub: string;
         email: string;
-      }>(token);
+      }>(token, {
+        algorithms: ['HS256'],
+        issuer: 'authforge',
+        audience: 'authforge-api',
+      });
 
       if (!payload.sub || !payload.email) {
         throw new UnauthorizedException('Invalid access token');
