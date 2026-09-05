@@ -91,18 +91,13 @@ export class AuthService {
     );
 
     if (!user || !user.isActive || !passwordMatches) {
-      await this.audit?.record(
-        'LOGIN_FAILURE',
-        user?.id,
-        context,
-        {
-          reason: !user
-            ? 'user-not-found'
-            : !user.isActive
-              ? 'user-inactive'
-              : 'invalid-password',
-        },
-      );
+      await this.audit?.record('LOGIN_FAILURE', user?.id, context, {
+        reason: !user
+          ? 'user-not-found'
+          : !user.isActive
+            ? 'user-inactive'
+            : 'invalid-password',
+      });
       throw new UnauthorizedException('Invalid email or password');
     }
 
