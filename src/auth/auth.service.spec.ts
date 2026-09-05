@@ -1,4 +1,5 @@
 import { ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { AuthService } from './auth.service';
 
 function createPrismaMock() {
@@ -65,7 +66,14 @@ describe('AuthService', () => {
   it('handles a database unique constraint race during registration', async () => {
     const prisma = createPrismaMock();
     prisma.user.findUnique.mockResolvedValue(null);
-    prisma.user.create.mockRejectedValue({ code: 'P2002' });
+    const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint failed',
+      {
+        code: 'P2002',
+        clientVersion: '6.0.0',
+      },
+    );
+    prisma.user.create.mockRejectedValue(uniqueConstraintError);
 
     const service = new AuthService(prisma as never);
 
