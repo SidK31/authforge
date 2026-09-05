@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: authforge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: authforge
+      POSTGRES_PASSWORD: authforge
+      POSTGRES_DB: authforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - authforge-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authforge -d authforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: authforge-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - authforge-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  authforge-postgres:
+  authforge-redis:
