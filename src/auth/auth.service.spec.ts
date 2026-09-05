@@ -17,7 +17,10 @@ function createPrismaMock() {
     $transaction: jest.fn(),
   };
 
-  prisma.$transaction.mockImplementation(async (callback) => callback(prisma));
+  prisma.$transaction.mockImplementation(
+    async (callback: (tx: typeof prisma) => Promise<unknown>) =>
+      callback(prisma),
+  );
   return prisma;
 }
 
