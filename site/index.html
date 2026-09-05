@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AuthForge secure authentication and authorization infrastructure.">
+  <title>AuthForge</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./">AuthForge</a>
+    <a class="github" href="https://github.com/SidK31/authforge" target="_blank" rel="noreferrer">GitHub</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Secure authentication infrastructure</p>
+        <h1>Authentication should be easier to build correctly.</h1>
+        <p class="lead">AuthForge is a backend project focused on secure user accounts, sessions, authorization and security controls that developers can understand and integrate.</p>
+        <div class="actions">
+          <a class="button primary" href="#register">Try the demo</a>
+          <a class="button secondary" href="https://github.com/SidK31/authforge" target="_blank" rel="noreferrer">View source</a>
+        </div>
+      </div>
+      <div class="architecture-card">
+        <div class="card-label">Current architecture</div>
+        <div class="flow">
+          <span>Client</span>
+          <b>→</b>
+          <span>REST API</span>
+          <b>→</b>
+          <span>NestJS</span>
+        </div>
+        <div class="services">
+          <span>Auth</span>
+          <span>Users</span>
+          <span>Sessions</span>
+          <span>Roles</span>
+          <span>Audit</span>
+        </div>
+        <div class="flow muted">
+          <span>PostgreSQL</span>
+          <b>+</b>
+          <span>Redis</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="register">
+      <div class="section-heading">
+        <p class="eyebrow">Interactive demo</p>
+        <h2>Test the registration experience</h2>
+        <p>This page is currently a frontend demo. It validates the request locally and does not send real credentials to a server yet.</p>
+      </div>
+
+      <div class="demo-grid">
+        <form id="register-form" class="panel" novalidate>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="320">
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="new-password" placeholder="At least 12 characters" required minlength="12" maxlength="128">
+
+          <button class="button primary full" type="submit">Validate registration</button>
+          <p id="form-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="panel result-panel">
+          <div class="panel-title">What the backend expects</div>
+          <pre id="request-preview">{
+  "email": "",
+  "password": ""
+}</pre>
+          <div class="notice">
+            <strong>Demo mode</strong>
+            <span>The real API will be connected after the backend is deployed. No password entered here is stored or sent anywhere.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section compact">
+      <div class="section-heading">
+        <p class="eyebrow">Built for developers</p>
+        <h2>What AuthForge is working toward</h2>
+      </div>
+      <div class="feature-grid">
+        <article><h3>Secure passwords</h3><p>Passwords are handled with a memory hard password hashing approach instead of storing the original secret.</p></article>
+        <article><h3>Sessions</h3><p>Refresh tokens will be rotated and tracked so compromised sessions can be revoked.</p></article>
+        <article><h3>Authorization</h3><p>Roles and permissions will be enforced on the server, not trusted from client supplied values.</p></article>
+        <article><h3>Security testing</h3><p>Abuse cases and common authentication failures will be tested and documented as the project grows.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>AuthForge</span>
+    <span>Built by SidK31</span>
+  </footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
