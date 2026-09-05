@@ -3,9 +3,13 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-function createContext(authorization?: string): ExecutionContext {
+function createContext(
+  authorization?: string,
+  initialUser?: { sub: string; email: string },
+): ExecutionContext {
   const request = {
     headers: authorization ? { authorization } : {},
+    user: initialUser,
   };
 
   return {
@@ -110,6 +114,33 @@ describe('JwtAuthGuard', () => {
       algorithms: ['HS256'],
       issuer: 'authforge',
       audience: 'authforge-api',
+    });
+  });
+
+  it('overwrites a pre-existing request identity with the verified JWT identity', async () => {
+    const reflector = {
+      getAllAndOverride: jest.fn().mockReturnValue(false),
+    } as unknown as Reflector;
+    const jwt = {
+      verifyAsync: jest.fn().mockResolvedValue({
+        sub: 'verified-user-id',
+        email: 'verified@example.com',
+      }),
+    } as unknown as JwtService;
+    const guard = new JwtAuthGuard(jwt, reflector);
+    const context = createContext('Bearer valid-token', {
+      sub: 'attacker-user-id',
+      email: 'attacker@example.com',
+    });
+    const request = context.switchToHttp().getRequest() as {
+      user?: { sub: string; email: string };
+    };
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+
+    expect(request.user).toEqual({
+      sub: 'verified-user-id',
+      email: 'verified@example.com',
     });
   });
 
