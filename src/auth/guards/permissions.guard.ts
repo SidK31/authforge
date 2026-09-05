@@ -6,9 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../database/prisma.service';
-import {
-  REQUIRED_PERMISSIONS_KEY,
-} from '../decorators/permissions.decorator';
+import { REQUIRED_PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { AuthenticatedRequest } from './jwt-auth.guard';
 
 @Injectable()
