@@ -25,6 +25,8 @@ const KEY_LENGTH = 64;
 const SALT_LENGTH = 16;
 const ACCESS_TOKEN_TTL_SECONDS = 900;
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const DUMMY_PASSWORD_HASH =
+  'scrypt:61757468666f7267652d64756d6d792d73616c74:9932b8301727dfe88026c5c1230a96cad59076f2d670e5b22486399b96ffd8bf9dea41129dc0aec99f02c7493cf560d0a38c318151af80ac34b681e35664b07c';
 
 @Injectable()
 export class AuthService {
@@ -83,27 +85,23 @@ export class AuthService {
       where: { email },
     });
 
-    if (!user || !user.isActive) {
+    const passwordMatches = await this.verifyPassword(
+      input.password,
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+    );
+
+    if (!user || !user.isActive || !passwordMatches) {
       await this.audit?.record(
         'LOGIN_FAILURE',
         user?.id,
         context,
-        { reason: !user ? 'user-not-found' : 'user-inactive' },
-      );
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    const passwordMatches = await this.verifyPassword(
-      input.password,
-      user.passwordHash,
-    );
-
-    if (!passwordMatches) {
-      await this.audit?.record(
-        'LOGIN_FAILURE',
-        user.id,
-        context,
-        { reason: 'invalid-password' },
+        {
+          reason: !user
+            ? 'user-not-found'
+            : !user.isActive
+              ? 'user-inactive'
+              : 'invalid-password',
+        },
       );
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -200,19 +198,26 @@ export class AuthService {
         },
       });
 
-      return this.createTokenResponse(
-        session.user.id,
-        session.user.email,
-        nextRefreshToken,
-      );
+      return {
+        userId: session.user.id,
+        tokenResponse: await this.createTokenResponse(
+          session.user.id,
+          session.user.email,
+          nextRefreshToken,
+        ),
+      };
     });
 
-    await this.audit?.record('REFRESH_SUCCESS', undefined, context);
-    return response;
+    await this.audit?.record('REFRESH_SUCCESS', response.userId, context);
+    return response.tokenResponse;
   }
 
   async logout(input: RefreshTokenDto, context?: AuditContext) {
     const tokenHash = this.hashRefreshToken(input.refreshToken);
+    const session = await this.prisma.session.findUnique({
+      where: { refreshTokenHash: tokenHash },
+      select: { userId: true },
+    });
     const result = await this.prisma.session.updateMany({
       where: {
         refreshTokenHash: tokenHash,
@@ -224,7 +229,7 @@ export class AuthService {
       },
     });
 
-    await this.audit?.record('LOGOUT', undefined, context, {
+    await this.audit?.record('LOGOUT', session?.userId, context, {
       sessionRevoked: result.count === 1,
     });
 
