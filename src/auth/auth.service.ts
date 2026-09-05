@@ -19,9 +19,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new ConflictException(
-        'An account with this email already exists',
-      );
+      throw new ConflictException('An account with this email already exists');
     }
 
     const passwordHash = await this.hashPassword(input.password);
