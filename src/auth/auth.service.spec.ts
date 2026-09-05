@@ -4,12 +4,21 @@ import { randomBytes, scryptSync } from 'node:crypto';
 import { AuthService } from './auth.service';
 
 function createPrismaMock() {
-  return {
+  const prisma = {
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    session: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
+
+  prisma.$transaction.mockImplementation(async (callback) => callback(prisma));
+  return prisma;
 }
 
 function createJwtMock() {
@@ -98,7 +107,7 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('logs in an active user and returns a short-lived access token', async () => {
+  it('logs in an active user, creates a session, and returns tokens', async () => {
     const prisma = createPrismaMock();
     const jwt = createJwtMock();
     const passwordHash = createPasswordHash('a-secure-password-123');
@@ -108,6 +117,7 @@ describe('AuthService', () => {
       passwordHash,
       isActive: true,
     });
+    prisma.session.create.mockResolvedValue({ id: 'session-id' });
     jwt.signAsync.mockResolvedValue('signed-access-token');
 
     const service = new AuthService(prisma as never, jwt as never);
@@ -119,15 +129,22 @@ describe('AuthService', () => {
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { email: 'user@example.com' },
     });
+    expect(prisma.session.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-id',
+        refreshTokenHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+        tokenFamilyId: expect.any(String),
+        expiresAt: expect.any(Date),
+      }),
+    });
     expect(jwt.signAsync).toHaveBeenCalledWith({
       sub: 'user-id',
       email: 'user@example.com',
     });
-    expect(result).toEqual({
-      accessToken: 'signed-access-token',
-      tokenType: 'Bearer',
-      expiresIn: 900,
-    });
+    expect(result.accessToken).toBe('signed-access-token');
+    expect(result.refreshToken).toEqual(expect.any(String));
+    expect(result.tokenType).toBe('Bearer');
+    expect(result.expiresIn).toBe(900);
   });
 
   it('uses the same generic error for unknown users and wrong passwords', async () => {
@@ -167,6 +184,102 @@ describe('AuthService', () => {
         password: 'correct-password',
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rotates a refresh token and preserves the token family', async () => {
+    const prisma = createPrismaMock();
+    const jwt = createJwtMock();
+    const service = new AuthService(prisma as never, jwt as never);
+    prisma.session.findUnique.mockResolvedValue({
+      id: 'session-id',
+      userId: 'user-id',
+      refreshTokenHash: 'old-hash',
+      tokenFamilyId: 'family-id',
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      replacedAt: null,
+      user: {
+        id: 'user-id',
+        email: 'user@example.com',
+        isActive: true,
+      },
+    });
+    prisma.session.updateMany.mockResolvedValue({ count: 1 });
+    prisma.session.create.mockResolvedValue({ id: 'next-session-id' });
+    jwt.signAsync.mockResolvedValue('new-access-token');
+
+    const result = await service.refresh({ refreshToken: 'a'.repeat(64) });
+
+    expect(prisma.session.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'session-id', revokedAt: null },
+        data: expect.objectContaining({
+          replacedAt: expect.any(Date),
+          revokedReason: 'rotated',
+        }),
+      }),
+    );
+    expect(prisma.session.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'user-id',
+        tokenFamilyId: 'family-id',
+        refreshTokenHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+        expiresAt: expect.any(Date),
+      }),
+    });
+    expect(result.accessToken).toBe('new-access-token');
+  });
+
+  it('revokes the token family when a rotated refresh token is reused', async () => {
+    const prisma = createPrismaMock();
+    const service = new AuthService(prisma as never, createJwtMock() as never);
+    prisma.session.findUnique.mockResolvedValue({
+      id: 'session-id',
+      userId: 'user-id',
+      tokenFamilyId: 'family-id',
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: new Date(),
+      replacedAt: new Date(),
+      user: { id: 'user-id', email: 'user@example.com', isActive: true },
+    });
+    prisma.session.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.refresh({ refreshToken: 'a'.repeat(64) }),
+    ).rejects.toEqual(new UnauthorizedException('Invalid refresh token'));
+
+    expect(prisma.session.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-id',
+        tokenFamilyId: 'family-id',
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+        revokedReason: 'refresh-token-reuse-detected',
+      },
+    });
+  });
+
+  it('revokes a refresh token on logout', async () => {
+    const prisma = createPrismaMock();
+    const service = new AuthService(prisma as never, createJwtMock() as never);
+    prisma.session.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.logout({ refreshToken: 'a'.repeat(64) }),
+    ).resolves.toEqual({ success: true });
+
+    expect(prisma.session.updateMany).toHaveBeenCalledWith({
+      where: {
+        refreshTokenHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+        revokedReason: 'logout',
+      },
+    });
   });
 
   it('verifies a correct password and rejects an incorrect password', async () => {
