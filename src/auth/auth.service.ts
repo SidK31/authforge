@@ -116,11 +116,25 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      if (
-        session.revokedAt ||
-        session.expiresAt <= new Date() ||
-        !session.user.isActive
-      ) {
+      if (session.revokedAt) {
+        if (session.replacedAt) {
+          await tx.session.updateMany({
+            where: {
+              userId: session.userId,
+              tokenFamilyId: session.tokenFamilyId,
+              revokedAt: null,
+            },
+            data: {
+              revokedAt: new Date(),
+              revokedReason: 'refresh-token-reuse-detected',
+            },
+          });
+        }
+
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      if (session.expiresAt <= new Date() || !session.user.isActive) {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
