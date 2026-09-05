@@ -16,6 +16,7 @@ import {
 import { promisify } from 'node:util';
 import { AuditContext, AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
+import { AuthAbuseService } from './auth-abuse.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -34,6 +35,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     @Optional() private readonly audit?: AuditService,
+    @Optional() private readonly abuse?: AuthAbuseService,
   ) {}
 
   async register(input: RegisterDto, context?: AuditContext) {
@@ -81,6 +83,8 @@ export class AuthService {
 
   async login(input: LoginDto, context?: AuditContext) {
     const email = input.email.trim().toLowerCase();
+    await this.abuse?.assertLoginAllowed(email, context?.ipAddress);
+
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -113,11 +117,13 @@ export class AuthService {
       },
     });
 
+    await this.abuse?.clearLoginFailures(email, context?.ipAddress);
     await this.audit?.record('LOGIN_SUCCESS', user.id, context);
     return this.createTokenResponse(user.id, user.email, refreshToken);
   }
 
   async refresh(input: RefreshTokenDto, context?: AuditContext) {
+    await this.abuse?.assertRefreshAllowed(context?.ipAddress);
     const tokenHash = this.hashRefreshToken(input.refreshToken);
 
     const response = await this.prisma.$transaction(async (tx) => {
