@@ -259,6 +259,49 @@ export class AuthService {
     };
   }
 
+  async listSessions(userId: string) {
+    return this.prisma.session.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        lastUsedAt: true,
+        expiresAt: true,
+        userAgent: true,
+        ipAddress: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async revokeSession(
+    userId: string,
+    sessionId: string,
+    context?: AuditContext,
+  ) {
+    const result = await this.prisma.session.updateMany({
+      where: {
+        id: sessionId,
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+        revokedReason: 'user-requested',
+      },
+    });
+
+    await this.audit?.record('SESSION_REVOKED', userId, context, {
+      sessionRevoked: result.count === 1,
+    });
+
+    return { success: true, sessionRevoked: result.count === 1 };
+  }
+
   async verifyPassword(password: string, passwordHash: string) {
     const [algorithm, salt, storedKey] = passwordHash.split(':');
 
