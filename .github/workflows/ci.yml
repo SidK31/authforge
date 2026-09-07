@@ -30,13 +30,7 @@ jobs:
         run: npm run prisma:generate
 
       - name: Check formatting
-        run: |
-          npm run format:check || {
-            npx prettier@3.5.3 --write src/auth/auth.controller.ts
-            echo '--- Prettier diff ---'
-            git diff -- src/auth/auth.controller.ts
-            exit 1
-          }
+        run: npm run format:check
 
       - name: Check lint
         run: npm run lint:check
