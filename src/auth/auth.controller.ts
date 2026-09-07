@@ -1,8 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseUUIDPipe,
   Post,
   Req,
 } from '@nestjs/common';
@@ -123,6 +127,26 @@ export class AuthController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.accountLifecycle.resetPassword(input.token, input.newPassword, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
+  }
+
+  @Get('sessions')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  listSessions(@Req() request: AuthenticatedRequest) {
+    return this.authService.listSessions(request.user.sub);
+  }
+
+  @Delete('sessions/:sessionId')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  revokeSession(
+    @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.authService.revokeSession(request.user.sub, sessionId, {
       ipAddress: request.ip,
       userAgent: request.get('user-agent'),
     });
