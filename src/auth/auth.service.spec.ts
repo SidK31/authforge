@@ -12,6 +12,7 @@ function createPrismaMock() {
     session: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       updateMany: jest.fn(),
     },
     $transaction: jest.fn(),
@@ -370,6 +371,85 @@ describe('AuthService', () => {
       data: {
         revokedAt: expect.any(Date),
         revokedReason: 'logout',
+      },
+    });
+  });
+
+  it('lists only active, unexpired sessions for the authenticated user', async () => {
+    const prisma = createPrismaMock();
+    const service = new AuthService(prisma as never, createJwtMock() as never);
+    prisma.session.findMany.mockResolvedValue([
+      {
+        id: 'session-1',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        lastUsedAt: new Date('2026-01-02T00:00:00.000Z'),
+        expiresAt: new Date('2026-02-01T00:00:00.000Z'),
+        userAgent: 'browser',
+        ipAddress: '203.0.113.10',
+      },
+    ]);
+
+    const result = await service.listSessions('user-id');
+
+    expect(result).toHaveLength(1);
+    expect(prisma.session.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-id',
+        revokedAt: null,
+        expiresAt: { gt: expect.any(Date) },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        lastUsedAt: true,
+        expiresAt: true,
+        userAgent: true,
+        ipAddress: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+
+  it('revokes only a session owned by the authenticated user', async () => {
+    const prisma = createPrismaMock();
+    const service = new AuthService(prisma as never, createJwtMock() as never);
+    prisma.session.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.revokeSession('owner-user-id', 'session-id'),
+    ).resolves.toEqual({ success: true, sessionRevoked: true });
+
+    expect(prisma.session.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'session-id',
+        userId: 'owner-user-id',
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+        revokedReason: 'user-requested',
+      },
+    });
+  });
+
+  it('reports a missing or already-revoked session without changing another session', async () => {
+    const prisma = createPrismaMock();
+    const service = new AuthService(prisma as never, createJwtMock() as never);
+    prisma.session.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.revokeSession('owner-user-id', 'missing-session-id'),
+    ).resolves.toEqual({ success: true, sessionRevoked: false });
+
+    expect(prisma.session.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'missing-session-id',
+        userId: 'owner-user-id',
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+        revokedReason: 'user-requested',
       },
     });
   });
