@@ -79,10 +79,10 @@ sequenceDiagram
 | --- | --- |
 | Passwords | Node.js `scrypt` with per-password random salt |
 | Access tokens | Short-lived JWTs, 15 minutes |
-| JWT validation | HS256 + issuer + audience restrictions |
+| JWT validation | HS256 + issuer + audience restrictions + fresh DB identity check |
 | Refresh tokens | Opaque random tokens; only SHA-256 hashes stored |
 | Refresh rotation | One-time rotation with token-family reuse detection |
-| Sessions | Server-side revocation and logout-all |
+| Sessions | Server-side listing, per-session revocation and logout-all |
 | Authorization | Server-side RBAC and fine-grained permissions |
 | Abuse protection | Redis-backed login and refresh controls |
 | Audit | Security events with request context, never raw credentials |
@@ -99,7 +99,7 @@ AuthForge now has the security foundation for:
 - Access-token issuance
 - Refresh-token rotation
 - Refresh-token replay detection
-- Session revocation
+- Session listing and revocation
 - Logout-all
 - Role and permission checks
 
@@ -111,7 +111,7 @@ Authorization is enforced on the server rather than trusting client-provided rol
 
 ```mermaid
 flowchart LR
-    JWT[Verified JWT subject] --> User[Load user identity]
+    JWT[Verified JWT subject] --> User[Load current user identity]
     User --> Roles[User roles]
     Roles --> Permissions[Role permissions]
     Permissions --> Guard[PermissionsGuard]
@@ -140,31 +140,34 @@ flowchart LR
 
 - Secure registration and password hashing
 - Login with unknown-user timing mitigation
-- JWT access tokens with strict verification constraints
+- JWT access tokens with strict algorithm, issuer and audience verification
+- Fresh database identity validation on every protected request
 - Refresh-token rotation
 - Refresh-token replay detection
-- Session revocation
+- Session listing and ownership-scoped revocation
+- Logout-all
 - Server-side RBAC and permissions
 - Redis-backed authentication abuse controls
 - Authentication audit events
 - Secure account recovery token storage and consumption primitives
 - Automated security regression tests
 - CI formatting, linting, tests and build
+- Pre-deployment security review and release checklist
 
 ### 🟡 In progress
 
 - Email delivery integration
-- Fresh identity validation on protected requests
-- Session management APIs
 - Full password-reset/email-verification end-to-end testing
 - Production deployment
+- Operational monitoring and alerting finalization
+- Public API contract finalization/versioning
 
 ### 🔴 Not production-ready yet
 
 - No production email provider is connected
 - Backend deployment is not yet the public demo backend
-- Operational monitoring and alerting still need finalization
-- Public API contract still needs final hardening
+- Production secrets, HTTPS, PostgreSQL/Redis hosting, migrations/backups and operational controls still need to be configured and verified
+- Browser-client token storage/transport strategy still needs to be finalized for the eventual production client
 
 ## Security testing
 
@@ -190,12 +193,13 @@ Current regression coverage includes:
 | [`PRODUCT.md`](docs/PRODUCT.md) | Product scope and boundaries |
 | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture |
 | [`DATABASE.md`](docs/DATABASE.md) | Database design |
-| [`API.md`](docs/API.md) | API direction and endpoint contracts |
-| [`AUTHENTICATION.md`](docs/AUTHENTICATION.md) | Authentication lifecycle |
+| [`API.md`](docs/API.md) | Implemented API endpoints and public security rules |
+| [`AUTHENTICATION.md`](docs/AUTHENTICATION.md) | Authentication and token lifecycle |
 | [`REGISTRATION-SECURITY.md`](docs/REGISTRATION-SECURITY.md) | Registration security decisions |
 | [`THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Threats and mitigations |
 | [`DECISIONS.md`](docs/DECISIONS.md) | Engineering/security decisions |
 | [`ROADMAP.md`](docs/ROADMAP.md) | Build roadmap |
+| [`PRE-DEPLOYMENT-SECURITY-CHECKLIST.md`](docs/PRE-DEPLOYMENT-SECURITY-CHECKLIST.md) | Production release gates |
 
 ## Live demo
 
