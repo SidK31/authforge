@@ -153,12 +153,13 @@ flowchart LR
 - Automated security regression tests
 - CI formatting, linting, tests and build
 - Pre-deployment security review and release checklist
+- Hosted deployment runbook
 
 ### 🟡 In progress
 
 - Email delivery integration
 - Full password-reset/email-verification end-to-end testing
-- Production deployment
+- Production deployment and hosted smoke testing
 - Operational monitoring and alerting finalization
 - Public API contract finalization/versioning
 
@@ -199,6 +200,7 @@ Current regression coverage includes:
 | [`THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Threats and mitigations |
 | [`DECISIONS.md`](docs/DECISIONS.md) | Engineering/security decisions |
 | [`ROADMAP.md`](docs/ROADMAP.md) | Build roadmap |
+| [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Hosted deployment runbook |
 | [`PRE-DEPLOYMENT-SECURITY-CHECKLIST.md`](docs/PRE-DEPLOYMENT-SECURITY-CHECKLIST.md) | Production release gates |
 
 ## Live demo
