@@ -7,16 +7,16 @@ import {
   Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { Public } from './decorators/public.decorator';
 import { AccountLifecycleService } from './account-lifecycle.service';
 import { AuthService } from './auth.service';
-import { AuthenticatedRequest } from './guards/jwt-auth.guard';
 import { AccountTokenDto } from './dto/account-token.dto';
 import { EmailAddressDto } from './dto/email-address.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { TokenPasswordResetDto } from './dto/token-password-reset.dto';
+import { Public } from './decorators/public.decorator';
+import { AuthenticatedRequest } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {

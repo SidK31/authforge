@@ -66,7 +66,9 @@ export class AccountLifecycleService {
         accountToken.expiresAt <= now ||
         !accountToken.user.isActive
       ) {
-        throw new UnauthorizedException('Invalid or expired verification token');
+        throw new UnauthorizedException(
+          'Invalid or expired verification token',
+        );
       }
 
       const consumed = await tx.accountToken.updateMany({
@@ -79,7 +81,9 @@ export class AccountLifecycleService {
       });
 
       if (consumed.count !== 1) {
-        throw new UnauthorizedException('Invalid or expired verification token');
+        throw new UnauthorizedException(
+          'Invalid or expired verification token',
+        );
       }
 
       await tx.user.update({
@@ -144,7 +148,9 @@ export class AccountLifecycleService {
         accountToken.expiresAt <= now ||
         !accountToken.user.isActive
       ) {
-        throw new UnauthorizedException('Invalid or expired password reset token');
+        throw new UnauthorizedException(
+          'Invalid or expired password reset token',
+        );
       }
 
       const consumed = await tx.accountToken.updateMany({
@@ -157,7 +163,9 @@ export class AccountLifecycleService {
       });
 
       if (consumed.count !== 1) {
-        throw new UnauthorizedException('Invalid or expired password reset token');
+        throw new UnauthorizedException(
+          'Invalid or expired password reset token',
+        );
       }
 
       await tx.user.update({
@@ -229,7 +237,11 @@ export class AccountLifecycleService {
 
   private async hashPassword(password: string) {
     const salt = randomBytes(16).toString('hex');
-    const derivedKey = (await scrypt(password, salt, PASSWORD_KEY_LENGTH)) as Buffer;
+    const derivedKey = (await scrypt(
+      password,
+      salt,
+      PASSWORD_KEY_LENGTH,
+    )) as Buffer;
     return `scrypt:${salt}:${derivedKey.toString('hex')}`;
   }
 }
