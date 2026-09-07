@@ -86,7 +86,7 @@ sequenceDiagram
 | Authorization | Server-side RBAC and fine-grained permissions |
 | Abuse protection | Redis-backed login and refresh controls |
 | Audit | Security events with request context, never raw credentials |
-| Recovery tokens | Opaque, hashed, expiring, single-use account tokens |
+| Recovery tokens | 256-bit opaque tokens, hashed at rest, expiring and single-use |
 
 ## Account lifecycle
 
