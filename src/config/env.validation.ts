@@ -1,4 +1,4 @@
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Type } from 'class-transformer';
 import {
   IsEnum,
   IsInt,
@@ -14,6 +14,7 @@ class EnvironmentVariables {
   @IsEnum(['development', 'test', 'production'])
   NODE_ENV: 'development' | 'test' | 'production' = 'development';
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(65_535)
