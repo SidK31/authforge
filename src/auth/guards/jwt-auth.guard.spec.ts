@@ -182,11 +182,7 @@ describe('JwtAuthGuard', () => {
 
     await guard.canActivate(createContext('Bearer token'));
 
-    expect(jwt.verifyAsync).toHaveBeenCalledWith('token', {
-      algorithms: ['HS256'],
-      issuer: 'authforge',
-      audience: 'authforge-api',
-    });
+    expect(jwt.verifyAsync).toHaveBeenCalledWith('token', verificationOptions);
   });
 
   it('rejects tokens when JWT verification fails for issuer, audience, algorithm, or expiry', async () => {
