@@ -15,7 +15,13 @@ NestJS API container
 
 The API should run as a single container initially. PostgreSQL is the system of record and Redis is used for temporary authentication-abuse state. No application state should depend on the container filesystem.
 
-A managed PostgreSQL service and managed Redis service are preferred for the first hosted deployment. The API can then be deployed on a container platform that supports environment variables, HTTPS, health checks, logs, and rolling/restart behavior.
+The first deployment target is Render for the API, with managed PostgreSQL and Upstash Redis. Render can build the repository Dockerfile directly and provides an HTTPS service endpoint and health checks. Upstash provides a managed Redis-compatible service with TLS support. citeturn0search12turn0search1
+
+## Render blueprint
+
+The repository includes `render.yaml` with the API service definition and `/api/health` health-check path. The three secret connection values are intentionally marked `sync: false` so they must be supplied through the Render dashboard rather than committed to Git.
+
+Render supports Dockerfile-based web services and uses the Dockerfile `CMD` by default. citeturn0search12turn0search15
 
 ## Required environment variables
 
@@ -41,6 +47,8 @@ npx prisma migrate deploy
 
 Do **not** run `prisma migrate dev` against production. Migration files committed under `prisma/migrations` are the source of truth for schema changes.
 
+For Render, the migration should be executed as a release/pre-deploy step when the selected service plan supports it. Render documents pre-deploy commands as the mechanism for work that must happen before a deployment, including database migrations. citeturn0search15
+
 Recommended release sequence:
 
 1. Provision PostgreSQL.
@@ -57,7 +65,7 @@ Migrations should be reviewed before deployment and backed up according to the d
 
 ## Startup behavior
 
-The API connects to PostgreSQL during NestJS module initialization. If the database cannot be reached, startup should fail rather than serving a partially functional authentication service.
+The API connects to PostgreSQL during NestJS module initialization. If the database cannot be reached, startup should fail rather than serving a partially functional authentication service. fileciteturn896file0
 
 The current public endpoint is:
 
@@ -65,13 +73,13 @@ The current public endpoint is:
 GET /api/health
 ```
 
-It is intentionally lightweight and does not currently prove PostgreSQL or Redis readiness. Therefore it can be used as a basic process/liveness check, but it must **not** be treated as a complete dependency readiness check until a dependency-aware readiness endpoint is implemented.
+It is intentionally lightweight and does not currently prove PostgreSQL or Redis readiness. Therefore it can be used as a basic process/liveness check, but it must **not** be treated as a complete dependency readiness check until a dependency-aware readiness endpoint is implemented. fileciteturn893file0turn894file0
 
 ## Redis requirement
 
-Redis is part of the production authentication security boundary because login and refresh abuse controls use Redis-backed state. In production, missing or unavailable Redis protection fails closed for those protected flows rather than silently disabling the controls.
+Redis is part of the production authentication security boundary because login and refresh abuse controls use Redis-backed state. In production, missing or unavailable Redis protection fails closed for those protected flows rather than silently disabling the controls. fileciteturn897file0
 
-Redis should be provisioned as a managed service where possible, with authentication/TLS configured according to the provider's recommendations.
+Create the Redis database in the Upstash Console and copy its TLS Redis connection URL into `REDIS_URL`. Upstash documents creating a database through the console and connecting over the standard Redis protocol with TLS. citeturn0search1turn0search0
 
 ## Docker
 
