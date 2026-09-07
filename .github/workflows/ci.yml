@@ -26,6 +26,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Capture dependency audit
+        run: npm audit --json > audit.json || true
+
+      - name: Upload dependency audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: authforge-dependency-audit
+          path: audit.json
+          if-no-files-found: error
+
       - name: Generate Prisma client
         run: npm run prisma:generate
 
