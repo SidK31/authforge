@@ -29,7 +29,10 @@ export class AuthController {
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
-  register(@Body() input: RegisterDto, @Req() request: AuthenticatedRequest) {
+  register(
+    @Body() input: RegisterDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
     return this.authService.register(input, {
       ipAddress: request.ip,
       userAgent: request.get('user-agent'),
@@ -65,7 +68,10 @@ export class AuthController {
   @Post('logout')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
-  logout(@Body() input: RefreshTokenDto, @Req() request: AuthenticatedRequest) {
+  logout(
+    @Body() input: RefreshTokenDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
     return this.authService.logout(input, {
       ipAddress: request.ip,
       userAgent: request.get('user-agent'),
