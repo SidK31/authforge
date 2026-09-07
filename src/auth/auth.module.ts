@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import Redis from 'ioredis';
 import { AuditService } from '../audit/audit.service';
 import { DatabaseModule } from '../database/database.module';
+import { AccountLifecycleService } from './account-lifecycle.service';
 import { AuthAbuseService, AUTH_ABUSE_REDIS } from './auth-abuse.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -29,6 +30,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AccountLifecycleService,
     AuditService,
     AuthAbuseService,
     {

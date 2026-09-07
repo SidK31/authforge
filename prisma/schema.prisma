@@ -20,6 +20,7 @@ model User {
   sessions     Session[]
   userRoles    UserRole[]
   auditEvents  AuditEvent[]
+  accountTokens AccountToken[]
 
   @@index([createdAt])
 }
@@ -86,6 +87,20 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@index([tokenFamilyId])
+}
+
+model AccountToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tokenHash  String   @unique
+  type       String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, expiresAt])
 }
 
 model AuditEvent {

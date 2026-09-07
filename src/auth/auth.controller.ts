@@ -8,15 +8,22 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from './decorators/public.decorator';
+import { AccountLifecycleService } from './account-lifecycle.service';
 import { AuthService } from './auth.service';
 import { AuthenticatedRequest } from './guards/jwt-auth.guard';
+import { AccountTokenDto } from './dto/account-token.dto';
+import { EmailAddressDto } from './dto/email-address.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { TokenPasswordResetDto } from './dto/token-password-reset.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly accountLifecycle: AccountLifecycleService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -63,6 +70,66 @@ export class AuthController {
       ipAddress: request.ip,
       userAgent: request.get('user-agent'),
     });
+  }
+
+  @Public()
+  @Post('request-email-verification')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  requestEmailVerification(
+    @Body() input: EmailAddressDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.accountLifecycle.requestEmailVerification(input.email, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
+  }
+
+  @Public()
+  @Post('verify-email')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  verifyEmail(
+    @Body() input: AccountTokenDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.accountLifecycle.verifyEmail(input.token, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
+  }
+
+  @Public()
+  @Post('request-password-reset')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  requestPasswordReset(
+    @Body() input: EmailAddressDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.accountLifecycle.requestPasswordReset(input.email, {
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent'),
+    });
+  }
+
+  @Public()
+  @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  resetPassword(
+    @Body() input: TokenPasswordResetDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.accountLifecycle.resetPassword(
+      input.token,
+      input.newPassword,
+      {
+        ipAddress: request.ip,
+        userAgent: request.get('user-agent'),
+      },
+    );
   }
 
   @Post('logout-all')
