@@ -103,7 +103,7 @@ AuthForge now has the security foundation for:
 - Logout-all
 - Role and permission checks
 
-Email delivery integration is deliberately separated from token security. The backend creates and consumes secure recovery tokens without storing the raw token in PostgreSQL; the delivery adapter will be connected as the account lifecycle moves toward deployment.
+Email delivery integration is deliberately separated from token security. The backend creates and consumes secure recovery tokens without storing the raw token in PostgreSQL; request endpoints return only generic messages and never return the raw recovery token.
 
 ## Authorization
 
