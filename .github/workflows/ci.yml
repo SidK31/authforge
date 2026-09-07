@@ -26,6 +26,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Generate dependency lockfile
+        run: npm install --package-lock-only
+
+      - name: Upload generated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: authforge-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+
       - name: Generate Prisma client
         run: npm run prisma:generate
 
