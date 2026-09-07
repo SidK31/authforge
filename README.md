@@ -1,316 +1,214 @@
-<div align="center">
-
 # AuthForge
 
-### Secure authentication & authorization infrastructure for modern applications
+<p align="center">
+  <strong>Secure authentication and authorization infrastructure for modern applications.</strong><br />
+  Built as a security-first NestJS backend with PostgreSQL, Redis and automated security testing.
+</p>
 
-**Production-oriented security engineering • TypeScript • NestJS • PostgreSQL • Redis**
-
-[![CI](https://github.com/SidK31/authforge/actions/workflows/ci.yml/badge.svg)](https://github.com/SidK31/authforge/actions/workflows/ci.yml)
-[![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-222?logo=github)](https://sidk31.github.io/authforge/)
-[![License](https://img.shields.io/badge/license-pending-lightgrey)](#license)
-
-<br />
-
-**AuthForge is being built to make authentication security understandable, testable, and reusable.**
-
-[Live Demo](https://sidk31.github.io/authforge/) · [Architecture](docs/ARCHITECTURE.md) · [Threat Model](docs/THREAT-MODEL.md) · [Roadmap](docs/ROADMAP.md)
-
-</div>
+<p align="center">
+  <a href="https://github.com/SidK31/authforge/actions/workflows/ci.yml"><img src="https://github.com/SidK31/authforge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://sidk31.github.io/authforge/"><img src="https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue" alt="Live Demo" /></a>
+  <img src="https://img.shields.io/badge/Node.js-24.x-green" alt="Node.js 24" />
+  <img src="https://img.shields.io/badge/NestJS-11-red" alt="NestJS 11" />
+  <img src="https://img.shields.io/badge/PostgreSQL-17-blue" alt="PostgreSQL 17" />
+  <img src="https://img.shields.io/badge/Redis-7-red" alt="Redis 7" />
+</p>
 
 ---
 
-## ⚡ What is AuthForge?
+## What is AuthForge?
 
-Authentication is easy to demo and surprisingly easy to get wrong.
+AuthForge is a production-oriented authentication and authorization platform being built from the security model outward.
 
-AuthForge is a backend-first authentication and authorization platform focused on the security details that usually get skipped: password handling, token lifecycle, refresh-token rotation, session revocation, authorization boundaries, abuse protection, and security audit trails.
+The project focuses on the parts that are easy to get subtly wrong: password handling, token lifecycle, refresh-token rotation, account recovery, authorization boundaries, abuse protection and security audit trails.
 
-The project is intentionally being built as a **modular monolith** rather than starting with unnecessary microservices. The goal is to keep the security model easy to reason about while still using production-oriented engineering practices.
+> **Project principle:** security behavior should be enforced by the backend, observable through tests, and understandable from the architecture.
 
-> **Status:** actively under development. Some capabilities are implemented today; others are deliberately marked as planned below.
-
----
-
-## 🛡️ Security at the center
-
-| Security area | Current direction |
-| --- | --- |
-| Password storage | Node.js `scrypt` with per-password random salt |
-| Login enumeration | Dummy password verification for unknown users |
-| Access tokens | Short-lived JWTs with strict issuer/audience/algorithm validation |
-| Refresh tokens | Opaque random tokens; only SHA-256 hashes are stored |
-| Refresh rotation | Token rotation with token-family reuse detection |
-| Sessions | Revocation, logout-all, expiry and session metadata |
-| Authorization | Server-side RBAC and permission checks |
-| Abuse protection | Redis-backed authentication throttling |
-| Auditability | Security events with IP/user-agent context and safe metadata |
-| Testing | Security-focused automated regression tests |
-
----
-
-## 🧩 Architecture
+## Architecture
 
 ```mermaid
 flowchart TB
-    Client[Client Application]
+    Client[Web / API Client]
     API[NestJS REST API]
-    Auth[Authentication Module]
-    Authz[Authorization / RBAC]
-    Users[Users Module]
-    Audit[Audit Service]
+    Auth[Authentication]
+    Recovery[Account Recovery]
+    RBAC[RBAC + Permissions]
+    Abuse[Abuse Protection]
+    Audit[Security Audit]
     DB[(PostgreSQL)]
     Redis[(Redis)]
 
-    Client -->|HTTPS / JSON| API
+    Client --> API
     API --> Auth
-    API --> Authz
-    API --> Users
+    API --> Recovery
+    API --> RBAC
+    API --> Abuse
+    API --> Audit
     Auth --> DB
-    Auth --> Redis
-    Auth --> Audit
-    Authz --> DB
-    Users --> DB
+    Recovery --> DB
+    RBAC --> DB
     Audit --> DB
+    Abuse --> Redis
 ```
 
-### Authentication flow
+### Security architecture
 
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant A as Auth API
-    participant DB as PostgreSQL
+    participant A as AuthForge
+    participant P as PostgreSQL
     participant R as Redis
 
-    C->>A: Register / Login
-    A->>R: Abuse-control check
-    A->>DB: Read user / verify password
-    A->>DB: Create session with refresh-token hash
-    A-->>C: Access JWT + refresh token
+    C->>A: Login credentials
+    A->>R: Abuse-control checks
+    A->>P: Load account + password hash
+    A->>A: Verify password
+    A->>P: Store refresh-token hash
+    A-->>C: Short-lived access + refresh token
 
     C->>A: Refresh token
-    A->>DB: Find active session
-    A->>DB: Rotate refresh token
-    A->>DB: Revoke reused token family if replay detected
-    A-->>C: New access JWT + refresh token
+    A->>P: Verify + rotate session
+    A->>P: Revoke replaced token
+    A-->>C: New access + refresh token
 ```
 
-The diagrams are intentionally simple: **the important part is the trust boundary and where security state lives.**
+## Security model
 
----
-
-## 🏗️ Tech Stack
-
-| Layer | Technology | Purpose |
-| --- | --- | --- |
-| Backend | **NestJS + TypeScript** | Modular REST API and security boundaries |
-| Database | **PostgreSQL** | Users, roles, permissions, sessions and audit events |
-| ORM | **Prisma** | Type-safe database access and migrations |
-| Security state | **Redis** | Authentication abuse controls and short-lived counters |
-| Authentication | **JWT + opaque refresh tokens** | Short-lived API access + rotating sessions |
-| Password hashing | **Node.js scrypt** | Password storage resistant to offline cracking |
-| Testing | **Jest** | Unit and security regression tests |
-| API docs | **Swagger / OpenAPI** | Developer-facing API contract |
-| Deployment | **Docker + GitHub Actions** | Reproducible builds and CI verification |
-
----
-
-## 🚦 Project Status
-
-### Foundation
-
-- 🟢 Project structure and product direction
-- 🟢 System architecture and threat model
-- 🟢 PostgreSQL + Prisma data model
-- 🟢 Docker and CI foundation
-- 🟢 GitHub Pages demo
-
-### Authentication
-
-- 🟢 Registration
-- 🟢 Secure password hashing
-- 🟢 Login
-- 🟢 JWT access-token validation
-- 🟢 Refresh-token rotation
-- 🟢 Replay/reuse detection
-- 🟢 Session revocation
-- 🟢 Logout / logout-all
-- 🟡 Password reset
-- 🟡 Email verification
-
-### Authorization & Security
-
-- 🟢 Roles and permissions foundation
-- 🟢 Server-side permission guard
-- 🟢 Privilege-boundary tests
-- 🟢 Authentication audit events
-- 🟢 Redis-backed authentication abuse controls
-- 🟢 Security-focused automated tests
-- 🟡 Broader security review and deployment hardening
-
----
-
-## 🔐 How the token model works
-
-AuthForge separates short-lived API access from long-lived session state.
-
-**Access token**
-
-- JWT
-- short-lived
-- signed by the server
-- validated with an explicit algorithm, issuer and audience
-- carries the authenticated subject used by protected routes
-
-**Refresh token**
-
-- cryptographically random and opaque
-- never stored in plaintext in PostgreSQL
-- represented by a SHA-256 hash in the `Session` table
-- rotated after successful refresh
-- linked to a token family
-- replay of a replaced token can revoke the remaining family
-
-This makes refresh tokens behave like revocable session credentials rather than permanent bearer credentials.
-
----
-
-## 👮 Authorization model
-
-AuthForge does not treat client-side role information as an authorization decision.
-
-Protected operations use server-side permission checks:
-
-```text
-Request
-  ↓
-JWT authentication
-  ↓
-Authenticated user
-  ↓
-User → Roles → Permissions
-  ↓
-Permission check
-  ↓
-Controller / operation
-```
-
-Example permission:
-
-```text
-roles:read
-```
-
-A valid JWT alone is **not** enough to access a permission-protected endpoint.
-
----
-
-## 🧪 Security testing
-
-The test suite is designed to verify security behavior, not only happy-path functionality.
-
-Current coverage includes:
-
-- password hashing and verification
-- unknown-user login behavior
-- inactive-user handling
-- JWT verification constraints
-- refresh-token rotation
-- refresh-token replay detection
-- session revocation
-- logout-all behavior
-- RBAC permission boundaries
-- authentication abuse-control limits
-- Redis failure behavior
-
-Every security change is expected to go through:
-
-```text
-Issue
-  ↓
-Implementation
-  ↓
-Security tests
-  ↓
-CI
-  ↓
-Review
-```
-
----
-
-## 📚 Documentation
-
-| Document | What it covers |
+| Area | Current approach |
 | --- | --- |
-| [`PRODUCT.md`](docs/PRODUCT.md) | Product scope and goals |
-| [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture and boundaries |
-| [`DATABASE.md`](docs/DATABASE.md) | Database design and relationships |
-| [`API.md`](docs/API.md) | API direction and endpoints |
+| Passwords | Node.js `scrypt` with per-password random salt |
+| Access tokens | Short-lived JWTs, 15 minutes |
+| JWT validation | HS256 + issuer + audience restrictions |
+| Refresh tokens | Opaque random tokens; only SHA-256 hashes stored |
+| Refresh rotation | One-time rotation with token-family reuse detection |
+| Sessions | Server-side revocation and logout-all |
+| Authorization | Server-side RBAC and fine-grained permissions |
+| Abuse protection | Redis-backed login and refresh controls |
+| Audit | Security events with request context, never raw credentials |
+| Recovery tokens | Opaque, hashed, expiring, single-use account tokens |
+
+## Account lifecycle
+
+AuthForge now has the security foundation for:
+
+- Registration
+- Login
+- Email verification token lifecycle
+- Password reset token lifecycle
+- Access-token issuance
+- Refresh-token rotation
+- Refresh-token replay detection
+- Session revocation
+- Logout-all
+- Role and permission checks
+
+Email delivery integration is deliberately separated from token security. The backend creates and consumes secure recovery tokens without storing the raw token in PostgreSQL; the delivery adapter will be connected as the account lifecycle moves toward deployment.
+
+## Authorization
+
+Authorization is enforced on the server rather than trusting client-provided roles.
+
+```mermaid
+flowchart LR
+    JWT[Verified JWT subject] --> User[Load user identity]
+    User --> Roles[User roles]
+    Roles --> Permissions[Role permissions]
+    Permissions --> Guard[PermissionsGuard]
+    Guard -->|allowed| Endpoint[Protected endpoint]
+    Guard -->|missing permission| Forbidden[403 Forbidden]
+```
+
+## Technology stack
+
+| Layer | Technology |
+| --- | --- |
+| Backend | TypeScript, NestJS 11 |
+| Database | PostgreSQL, Prisma ORM |
+| Cache / security state | Redis 7 |
+| Authentication | JWT + opaque refresh tokens |
+| Password hashing | Node.js `scrypt` |
+| Validation | class-validator |
+| API documentation | Swagger / OpenAPI |
+| Testing | Jest |
+| Deployment | Docker + GitHub Actions |
+| Public demo | GitHub Pages |
+
+## Project status
+
+### 🟢 Implemented
+
+- Secure registration and password hashing
+- Login with unknown-user timing mitigation
+- JWT access tokens with strict verification constraints
+- Refresh-token rotation
+- Refresh-token replay detection
+- Session revocation
+- Server-side RBAC and permissions
+- Redis-backed authentication abuse controls
+- Authentication audit events
+- Secure account recovery token storage and consumption primitives
+- Automated security regression tests
+- CI formatting, linting, tests and build
+
+### 🟡 In progress
+
+- Email delivery integration
+- Fresh identity validation on protected requests
+- Session management APIs
+- Full password-reset/email-verification end-to-end testing
+- Production deployment
+
+### 🔴 Not production-ready yet
+
+- No production email provider is connected
+- Backend deployment is not yet the public demo backend
+- Operational monitoring and alerting still need finalization
+- Public API contract still needs final hardening
+
+## Security testing
+
+The project treats security tests as part of the implementation, not as a final checklist.
+
+Current regression coverage includes:
+
+- Authentication failures and account enumeration resistance
+- Password hashing and constant-time password comparison
+- Refresh-token replay
+- Concurrent refresh races
+- Token-family revocation
+- Cross-user session isolation
+- Permission bypass attempts
+- JWT identity enforcement
+- Recovery-token expiry and single-use behavior
+- Session revocation after password reset
+
+## Documentation
+
+| Document | Purpose |
+| --- | --- |
+| [`PRODUCT.md`](docs/PRODUCT.md) | Product scope and boundaries |
+| [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture |
+| [`DATABASE.md`](docs/DATABASE.md) | Database design |
+| [`API.md`](docs/API.md) | API direction and endpoint contracts |
 | [`AUTHENTICATION.md`](docs/AUTHENTICATION.md) | Authentication lifecycle |
 | [`REGISTRATION-SECURITY.md`](docs/REGISTRATION-SECURITY.md) | Registration security decisions |
 | [`THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Threats and mitigations |
-| [`DECISIONS.md`](docs/DECISIONS.md) | Important engineering decisions |
-| [`ROADMAP.md`](docs/ROADMAP.md) | Implementation roadmap |
-| [`ACCOUNT-HEALTH.md`](docs/ACCOUNT-HEALTH.md) | Project/account operational notes |
+| [`DECISIONS.md`](docs/DECISIONS.md) | Engineering/security decisions |
+| [`ROADMAP.md`](docs/ROADMAP.md) | Build roadmap |
 
----
+## Live demo
 
-## 🌐 Live demo
+**[Open the AuthForge demo](https://sidk31.github.io/authforge/)**
 
-The frontend demo is deployed with GitHub Pages:
+The current GitHub Pages frontend is a demonstration interface. It validates input locally and does not send or store credentials. The production backend will be connected after backend deployment and operational hardening.
 
-**https://sidk31.github.io/authforge/**
+## Why build this?
 
-The current demo is intentionally safe. Registration input is validated locally and credentials are **not sent to or stored by a real backend yet**. The production API connection will be introduced after backend deployment is ready.
+Authentication is deceptively small in a product diagram and enormous in its security consequences.
 
----
+AuthForge is a practical engineering project for building those boundaries carefully: design the threat model, implement the control, write the regression test, run CI, and document the result.
 
-## 🎯 What comes next
-
-The next major milestones are:
-
-1. Password reset and email verification
-2. Fresh identity/session validation
-3. Additional authorization management APIs
-4. Broader security review and abuse-case testing
-5. Production deployment
-6. Public API and developer experience hardening
-7. First public release
-
-The roadmap is intentionally incremental. AuthForge is being built as a security project that can be **reviewed and trusted step by step**, rather than as a large code dump produced all at once.
-
----
-
-## 💡 Why build this?
-
-Most applications eventually need authentication. Fewer teams have the time to deeply reason about every security edge case around it.
-
-AuthForge is an engineering project for exploring those edge cases in a concrete system:
-
-**design → implement → attack the assumption → test the failure → harden → document**
-
-The long-term direction is an open-source security-focused authentication core with the option for hosted and enterprise deployments.
-
----
-
-## ⚠️ Production note
-
-AuthForge is **not yet a production-ready drop-in authentication service**. It is an actively developed engineering project.
-
-Before production use, the deployment will still require environment-specific work around secrets, TLS, trusted proxy configuration, Redis/PostgreSQL availability, monitoring, email delivery, operational alerting, backup/recovery, and a full security review.
-
-Never use the current GitHub Pages demo for real credentials.
-
----
-
-## 📄 License
+## License
 
 A license will be selected before the first public release.
-
-<div align="center">
-
-### Built with security in mind. Tested against assumptions. 🔐
-
-</div>
