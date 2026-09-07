@@ -45,9 +45,9 @@ describe('UsersService', () => {
     prisma.user.findUnique.mockResolvedValue(null);
     const service = new UsersService(prisma as never);
 
-    await expect(service.getCurrentUser('missing-user-id')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.getCurrentUser('missing-user-id'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('rejects a deactivated user', async () => {
